@@ -154,8 +154,11 @@ renders inline. Findings (November 2026):
   1. **An OAuth App instead (preferred).**
      - It also does device flow, and its tokens (`gho_`) are what `gh`
        uses, so attachments stay GitHub's own and render inline.
-     - The cost: OAuth scopes are coarse (`public_repo`, or `repo` for
-       private apps), and its tokens don't expire.
+     - The cost: OAuth scopes are coarse, and its tokens don't expire.
+       For private apps it needs the classic `repo` scope: read and write
+       on **every** repository the person can reach, settings included.
+       That's a lot to hand over in a shake sheet, so it's used only if
+       the owner accepts that breadth explicitly **(?)**.
      - A GitHub App's user token is narrower: Issues only, on the
        repositories it's installed on.
   2. **Images committed through the Contents API** to a
