@@ -37,6 +37,31 @@ only on the ones above it.
 `swift test` on Linux. `IssueComposer` and `ShakeKit` are SwiftUI, and
 their view models are tested on Linux too.
 
+**Shaped so an issues browser can adopt them without a rewrite:**
+- **`GitHubIssues`:**
+  - The types are `GitHubIssue`, `IssueComment`, `GitHubLabel` and
+    `IssueChange` (`title`, `body`, `labels`, `state`, `stateReason`, all
+    optional, with `isEmpty`). They match the owner's existing client in
+    names, Codable keys and optionality.
+  - The calls: create, update, close and reopen (with a reason), comment,
+    edit and delete a comment, list labels, and upload an attachment.
+- **`IssueComposer`:**
+  - **Sending is the host's.** Submit is an `async throws` closure the
+    host gives, so a host with an offline outbox can queue the issue
+    instead of sending it.
+  - **An accessory slot** (`@ViewBuilder`) beside title and body: an
+    issues browser's kind, status and priority pickers; ShakeKit's device
+    info.
+  - **Drafts** are kept through a small protocol, which defaults to
+    `UserDefaults`.
+  - **Attachments upload at submit, not when picked:**
+    1. Each attachment is uploaded.
+    2. The body's placeholders are rewritten to the returned URLs.
+    3. The host's submit is called.
+    4. On failure, the draft and its local files are kept.
+- **Kept in each host, not here:** its own issue model, label scheme,
+  cache and outbox.
+
 ## 2. API
 
     import ShakeKit
@@ -125,11 +150,24 @@ renders inline. Findings (November 2026):
   - Whether a GitHub App *user* token (`ghu_`, what device flow gives)
     is taken is **untested (?)**. It's the first thing to try once the
     Shake App exists, before any other code.
-- **If `ghu_` isn't taken:** register the Shake App as an **OAuth App**
-  instead. It also does device flow, and its tokens (`gho_`) are what
-  `gh` uses. The cost: OAuth scopes are coarse (`public_repo`, or `repo`
-  for private apps), and its tokens don't expire. A GitHub App's user
-  token is narrower: Issues only, on the repositories it's installed on.
+- **If `ghu_` isn't taken,** there are two fallbacks:
+  1. **An OAuth App instead (preferred).**
+     - It also does device flow, and its tokens (`gho_`) are what `gh`
+       uses, so attachments stay GitHub's own and render inline.
+     - The cost: OAuth scopes are coarse (`public_repo`, or `repo` for
+       private apps), and its tokens don't expire.
+     - A GitHub App's user token is narrower: Issues only, on the
+       repositories it's installed on.
+  2. **Images committed through the Contents API** to a
+     `shake-attachments` branch of the app's repository, and linked by
+     raw URL.
+     - It needs Contents write on the App.
+     - It renders inline on public repositories only: a private
+       repository's raw images don't render in its issues.
+     - It's the last resort.
+
+  `GitHubIssues` treats the upload as best-effort. If it fails, the issue
+  is still created, with the attachments left out and a note saying so.
 - **Rendering and privacy:**
   - On a **private** repository, attachments uploaded against it need
     GitHub sign-in and access to that repository. They're served through
@@ -252,6 +290,7 @@ Device flow, so the issue is opened as the person who signs in.
    The list of apps is kept with the owner, since some are private. The
    public ones: Visor, Playground and Isomer's Storybook.
 5. **The issues browser** moves onto `GitHubAuth`, `GitHubIssues` and
-   `IssueComposer`, in step with its owner.
+   `IssueComposer` after 0.1.0 is tagged, in step with its owner, pinning
+   it through rules_swift_package_manager.
 
 The issues get a `shake-report` label, made on first use if missing.
