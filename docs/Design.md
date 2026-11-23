@@ -100,10 +100,10 @@ Used without ShakeKit, the composer looks like this:
    add images from Photos or Files.
 3. **Logs:**
    - from `OSLogStore(scope: .currentProcessIdentifier)`, the last 15
-     minutes, the app's own subsystems only, capped at 256 KB (newest
-     kept);
-   - uploaded as a `.txt` attachment if the endpoint takes text files
-     **(?)**, otherwise put in the body, folded in a `<details>` block.
+     minutes, the app's own subsystems only (newest kept);
+   - put in the body, folded in a `<details>` block, since the attachment
+     endpoint takes only images and video. The cap keeps the body under
+     GitHub's 65,536-character limit.
 4. **About the app and device,** as a small table in the body:
    - the app's name, bundle id, version and build;
    - the OS and its version, and the device model;
