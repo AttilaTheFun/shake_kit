@@ -31,9 +31,11 @@ import Testing
         }
     }
 
-    private static func answer(_ status: Int = 200, _ json: String) -> GitHubAnswer {
+    private static func answer(_ status: Int, _ json: String) -> GitHubAnswer {
         GitHubAnswer(status: status, data: Data(json.utf8))
     }
+
+    private static func answer(_ json: String) -> GitHubAnswer { answer(200, json) }
 
     private static func body(_ request: GitHubRequest?) -> String {
         String(decoding: request?.body ?? Data(), as: UTF8.self)
