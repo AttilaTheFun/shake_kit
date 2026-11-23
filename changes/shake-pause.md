@@ -1,1 +1,0 @@
-- `.shakeToReportPaused(_:)`: a view that needs the shake itself pauses ShakeKit's shake (a deliberate request still works).
