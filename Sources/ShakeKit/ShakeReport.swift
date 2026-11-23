@@ -44,6 +44,10 @@ public final class ShakeReport {
     public var isPresented = false
     /// Whether the logs go into the issue.
     public var includeLogs = true
+    /// Whether shakes are ignored for now: a view that needs the shake
+    /// itself pauses them (`.shakeToReportPaused(_:)`). A deliberate request
+    /// still opens the report.
+    public var shakesPaused = false
     /// The app and device, as of the last report asked for.
     public private(set) var environment: ReportEnvironment
     /// The logs as they'll appear in the issue (redacted, capped); nil with none.
@@ -100,7 +104,7 @@ public final class ShakeReport {
     /// by a shake while nobody is signed in, neither.
     public func present(_ trigger: Trigger = .request) {
         guard !isPresented else { return }
-        if trigger == .shake, credentials.state != .signedIn { return }
+        if trigger == .shake, shakesPaused || credentials.state != .signedIn { return }
         if let png = screenshot() {
             let count = composer.draft.attachments.filter { $0.name.hasPrefix("screenshot-") }.count
             composer.attach(IssueAttachment(name: "screenshot-\(count + 1).png", contentType: "image/png", data: png))

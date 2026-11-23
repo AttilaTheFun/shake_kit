@@ -33,6 +33,9 @@ or `repo` for a private repository) or `ShakeKitClientID` (the OAuth App to
 sign in with) in its Info.plist; an empty value takes the default. The
 owner's apps stamp one in from CI in **every build**, production included.
 
+A view that needs the shake itself (a "shake to leave", say) pauses
+ShakeKit's with `.shakeToReportPaused(true)` while it's showing.
+
 A shake opens a report only for someone already signed in (the apps' shared
 sign-in, or ShakeKit's own), so it never surprises anyone else. To let people
 start it themselves, give them a Report a Bug button that calls

@@ -77,7 +77,9 @@ their view models are tested on Linux too.
   someone signed in** (through the apps' shared sign-in, or ShakeKit's
   own). Nobody else's shake does anything, so ShakeKit can be in every
   build without springing a sign-in on people. Shakes that come in while
-  it's up are ignored.
+  it's up are ignored, and so are shakes while a view that needs the shake
+  itself says so (`.shakeToReportPaused(true)`, a preference read by the
+  root modifier).
 - **macOS.** No shake: `ShakeKitCommands()` adds the menu command and its
   shortcut.
 - **Other hosts:** later. The API is kept portable, so they can follow

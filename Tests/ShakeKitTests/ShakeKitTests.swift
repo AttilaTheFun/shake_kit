@@ -164,6 +164,15 @@ struct ShakeReportTests {
         #expect(report.isPresented)
     }
 
+    @Test func aPausedShakeDoesNothingButARequestStillOpens() {
+        let report = report(github: FakeGitHub())
+        report.shakesPaused = true
+        report.present(.shake)
+        #expect(!report.isPresented)
+        report.present(.request)
+        #expect(report.isPresented)
+    }
+
     @Test func aShakeOpensItWhenSignedIn() {
         let report = report(github: FakeGitHub())
         report.present(.shake)

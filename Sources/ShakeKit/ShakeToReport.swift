@@ -18,6 +18,24 @@ extension View {
     }
 }
 
+extension View {
+    /// While `paused` is true, ShakeKit ignores shakes, for a view that needs
+    /// the shake itself. Put it anywhere below `.shakeToReport`; while any
+    /// such view says true, shakes are ignored. The Mac's menu command and
+    /// `ShakeReport.request()` still open a report.
+    public func shakeToReportPaused(_ paused: Bool = true) -> some View {
+        preference(key: ShakesPausedKey.self, value: paused)
+    }
+}
+
+/// Whether any view below asks for shakes to be ignored.
+struct ShakesPausedKey: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
 struct ShakeToReport: ViewModifier {
     @State private var report: ShakeReport
 
@@ -27,6 +45,9 @@ struct ShakeToReport: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .onPreferenceChange(ShakesPausedKey.self) { paused in
+                report.shakesPaused = paused
+            }
             .onReceive(NotificationCenter.default.publisher(for: ShakeReport.requested)) { notification in
                 report.present(notification.object as? ShakeReport.Trigger ?? .request)
             }
