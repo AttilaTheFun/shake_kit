@@ -7,22 +7,33 @@ import Testing
 @testable import ShakeKit
 
 struct ConfigurationTests {
-    @Test func defaultsWithoutInfo() {
+    @Test func offWithoutInfo() {
         let configuration = ShakeKitConfiguration.from(info: nil)
-        #expect(configuration.clientID == ShakeKitConfiguration.defaultClientID)
-        #expect(configuration.scope == "public_repo")
+        #expect(!configuration.isEnabled)
+        #expect(!ShakeKitConfiguration.from(info: ["CFBundleName": "App"]).isEnabled)
     }
 
-    @Test func infoOverrides() {
+    @Test func onWhenABuildOptsIn() {
         let configuration = ShakeKitConfiguration.from(info: ["ShakeKitClientID": "Ov23example", "ShakeKitScope": " repo "])
+        #expect(configuration.isEnabled)
         #expect(configuration.clientID == "Ov23example")
         #expect(configuration.scope == "repo")
     }
 
-    @Test func unfilledValuesCountAsNone() {
-        let configuration = ShakeKitConfiguration.from(info: ["ShakeKitClientID": "$(SHAKE_KIT_CLIENT_ID)", "ShakeKitScope": ""])
+    @Test func anEmptyValueTurnsItOnWithTheDefaults() {
+        let configuration = ShakeKitConfiguration.from(info: ["ShakeKitScope": ""])
+        #expect(configuration.isEnabled)
         #expect(configuration.clientID == ShakeKitConfiguration.defaultClientID)
         #expect(configuration.scope == ShakeKitConfiguration.defaultScope)
+    }
+
+    @Test func unfilledValuesCountAsAbsent() {
+        let configuration = ShakeKitConfiguration.from(info: ["ShakeKitClientID": "$(SHAKE_KIT_CLIENT_ID)"])
+        #expect(!configuration.isEnabled)
+    }
+
+    @Test func aConfigurationInCodeIsOn() {
+        #expect(ShakeKitConfiguration().isEnabled)
     }
 }
 

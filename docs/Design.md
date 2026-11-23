@@ -260,7 +260,10 @@ uploaded to user-attachments against this repository (201) and got a
 - **No network until the composer opens:** no analytics and no crash
   hooks. Screenshots and logs stay in memory (or the app's container, for
   a kept draft), and are dropped once the issue is created.
-- **Release builds:** with no `ShakeKitClientID`, ShakeKit does nothing.
+- **Release builds:** ShakeKit is on only when the build opts in, with
+  `ShakeKitClientID` or `ShakeKitScope` in its Info.plist, stamped by CI into
+  test and alpha builds (an empty value takes the default client id). A
+  release build for other people, with neither, offers no report.
 
 ## 7. Packaging and conventions (as update_kit)
 

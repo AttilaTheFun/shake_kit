@@ -6,8 +6,15 @@ import SwiftUI
 extension View {
     /// A shake (or Help › Report a Bug… on a Mac, with `ShakeKitCommands`)
     /// opens a bug report, filed as an issue in `repository` ("owner/name").
+    /// It does nothing unless `configuration` is on: by default, unless the
+    /// app's Info.plist opts in (`ShakeKitConfiguration.from(info:)`).
+    @ViewBuilder
     public func shakeToReport(repository: String, configuration: ShakeKitConfiguration = .main) -> some View {
-        modifier(ShakeToReport(repository: repository, configuration: configuration))
+        if configuration.isEnabled {
+            modifier(ShakeToReport(repository: repository, configuration: configuration))
+        } else {
+            self
+        }
     }
 }
 
