@@ -190,8 +190,13 @@ scope the app asks for.
   code.
 - **Tokens:**
   - The owner's OAuth App has token expiration on: a token lasts 8 hours
-    and comes with a refresh token, which `GitHubAuth` uses to renew it.
-    Expiry stays optional, for an OAuth App without expiration.
+    and comes with a refresh token (about 181 days), which `GitHubAuth`
+    uses to renew it. Expiry stays optional, for an OAuth App without
+    expiration.
+  - Tested 2026-11-23: the refresh needs no client secret (`client_id`,
+    `grant_type=refresh_token` and `refresh_token` alone). It rotates both
+    tokens: the old access token is refused at once, so the renewed pair is
+    kept before it's used.
   - The token goes in the app's keychain, in the host app's own access
     group. It must never be a group shared with another app's GitHub
     sign-in, or one sign-in would replace the other.
@@ -211,6 +216,14 @@ scope the app asks for.
 
   The owner's issues browser can move onto `GitHubAuth` and
   `GitHubIssues` once they're released.
+
+**A sign-in the host's apps share.** Where the host carries one (the
+`GitHubShared…` keys in its Info.plist, stamped by its CI, and the keychain
+and app groups they name), ShakeKit files with it, so someone signed in to
+one of the owner's apps needn't sign in again. That only happens when its
+token covers ShakeKit's scope; otherwise ShakeKit uses its own sign-in.
+ShakeKit never signs in to the shared one, or signs out of it: asking for a
+narrower scope would replace the token the other apps rely on.
 
 **The apps** (both named `logan-shire-shake`; tell them apart by client
 id, which is public, not a secret):

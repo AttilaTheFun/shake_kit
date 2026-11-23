@@ -18,7 +18,21 @@ Four libraries, each building on the ones before it:
 
     .product(name: "ShakeKit", package: "shake_kit")
 
-0.1.0 ships `GitHubAuth`, `GitHubIssues` and `IssueComposer`; `ShakeKit` itself
+In the app:
+
+    import ShakeKit
+
+    WindowGroup {
+        ContentView()
+            .shakeToReport(repository: "owner/app")
+    }
+    .commands { ShakeKitCommands() }   // Help › Report a Bug… (⌥⌘B)
+
+Its Info.plist may set `ShakeKitScope` (`public_repo`, the default, or `repo`
+for a private repository) and `ShakeKitClientID` (the OAuth App to sign in
+with; the owner's by default).
+
+0.1.0 shipped `GitHubAuth`, `GitHubIssues` and `IssueComposer`; `ShakeKit`
 comes in 0.2.0. `swift test` runs on Linux and on a Mac.
 
 ## Releasing
