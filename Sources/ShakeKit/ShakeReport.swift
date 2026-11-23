@@ -28,7 +28,7 @@ public final class ShakeReport {
     }
 
     /// What a deliberate request from someone who can't report says.
-    public static let signInNotice = "Sign in to Shireworks on this device to report bugs."
+    nonisolated public static let signInNotice = "Sign in to Shireworks on this device to report bugs."
 
     /// Asks for a report deliberately, from the app's own Report a Bug
     /// button.
