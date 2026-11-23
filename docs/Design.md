@@ -12,14 +12,13 @@ general, not shake-specific. They're public libraries here, which the
 owner's other apps (an issues browser among them) can use too. ShakeKit is
 the thin part on top: the shake, the screenshot and the logs.
 
-This note is for the owner to approve before any code. Open questions are
-marked **(?)**.
-
-**Decided so far:**
+**Decided** (by the owner, November 2026):
 - Apple's platforms come first; other hosts are later.
 - Markup comes later.
 - The app gives the repository.
-- Attachments are GitHub's own (section 4).
+- Attachments are GitHub's own, inline, through an **OAuth App** with
+  device flow (sections 4 and 5). It switches to a GitHub App when GitHub
+  allows that (TODO.md).
 
 ## 1. Libraries
 
@@ -126,8 +125,10 @@ renders inline. Findings (November 2026):
 
       POST https://uploads.github.com/user-attachments/assets
            ?name=<file>&content_type=<mime>&repository_id=<numeric id>
-      Authorization: Bearer <token>
+      Authorization: token <token>          (Bearer gets a 404)
       Content-Type: application/octet-stream
+      Accept: application/vnd.github+json
+      X-GitHub-Api-Version: 2022-11-28
 
   It returns `{"url": "https://github.com/user-attachments/assets/…"}`,
   which goes in the body as `![alt](url)`, as `gh` does. It's a plain token
@@ -140,37 +141,18 @@ renders inline. Findings (November 2026):
   - types: PNG, JPEG, GIF, WebP, SVG, MP4, MOV and WebM;
   - sizes: 10 MB for an image; 10 MB for a video (100 MB on paid plans);
   - no GitHub Enterprise Server.
-- **The token's access:** write access to the repository, so READ and
-  TRIAGE get a 404.
-  - GitHub's changelog names OAuth tokens and classic PATs.
-  - `gh`'s source says the endpoint "accepts tokens from only some GitHub
-    Apps".
-  - Tested 2026-11-22: a GitHub App *installation* token (`ghs_`) with
-    write access gets a 404.
-  - Whether a GitHub App *user* token (`ghu_`, what device flow gives)
-    is taken is **untested (?)**. It's the first thing to try once the
-    Shake App exists, before any other code.
-- **If `ghu_` isn't taken,** there are two fallbacks:
-  1. **An OAuth App instead (preferred).**
-     - It also does device flow, and its tokens (`gho_`) are what `gh`
-       uses, so attachments stay GitHub's own and render inline.
-     - The cost: OAuth scopes are coarse, and its tokens don't expire.
-       For private apps it needs the classic `repo` scope: read and write
-       on **every** repository the person can reach, settings included.
-       That's a lot to hand over in a shake sheet, so it's used only if
-       the owner accepts that breadth explicitly **(?)**.
-     - A GitHub App's user token is narrower: Issues only, on the
-       repositories it's installed on.
-  2. **Images committed through the Contents API** to a
-     `shake-attachments` branch of the app's repository, and linked by
-     raw URL.
-     - It needs Contents write on the App.
-     - It renders inline on public repositories only: a private
-       repository's raw images don't render in its issues.
-     - It's the last resort.
-
-  `GitHubIssues` treats the upload as best-effort. If it fails, the issue
-  is still created, with the attachments left out and a note saying so.
+- **Which tokens it takes** (tested 2026-11-23):
+  - The reporter needs write access to the repository; READ and TRIAGE
+    get a 404.
+  - OAuth App tokens (`gho_`, what `gh` uses) and personal access tokens
+    are accepted.
+  - A GitHub App's tokens are not: an installation token (`ghs_`) gets a
+    404 even with Contents write, and so does a user token (`ghu_`) from
+    the owner's own App.
+  - GitHub's CLI maintainers confirm it: only first-party apps (such as
+    Copilot's cloud agent) mint `ghu_` tokens the endpoint takes, and no
+    setting enables it for anyone else's App (cli/cli#14495). The request
+    to change that is cli/cli#14309.
 - **Rendering and privacy:**
   - On a **private** repository, attachments uploaded against it need
     GitHub sign-in and access to that repository. They're served through
@@ -178,61 +160,63 @@ renders inline. Findings (November 2026):
     collaborators and for no one else.
   - On a **public** repository, attachments are public, like the issue.
     The composer says so before sending.
-- **Rejected:** files kept in a separate repository and linked from the
-  issue. Images from a private repository don't render inline in issues,
-  even for viewers with access, which is what the owner saw.
+- **Rejected:**
+  - files kept in a separate repository and linked from the issue: images
+    from a private repository don't render inline in issues, even for
+    viewers with access;
+  - giving a GitHub App Contents permission: it doesn't open the endpoint;
+  - the web UI's cookie upload flow: undocumented, and it needs a browser
+    session.
 
-So: **user-attachments, through the reporter's token, against the
-app's own repository.**
-- No other repository is involved, and the App needs no Contents
-  permission.
-- Every reporter needs write access to the app's repository. That's the
-  owner and the app's collaborators, which fits who reports bugs.
+So: **an OAuth App, its token uploading to user-attachments against the
+app's own repository.** If an upload still fails, the issue is filed
+without that attachment, with a note saying so. Every reporter needs write
+access to the app's repository; that's the owner and the app's
+collaborators, which fits who reports bugs.
 
 ## 5. Sign-in (`GitHubAuth`)
 
-Device flow, so the issue is opened as the person who signs in.
+Device flow, with the owner's OAuth App, so the issue is opened as the
+person who signs in. The person acts with their own access, under the
+scope the app asks for.
 
+- **Scope, per app:** `public_repo` when the app's issue repository is
+  public, `repo` only when it's private (which reaches every repository the
+  person can). It's a setting in each app (`ShakeKitScope`), stamped like the
+  client id.
 - **The sign-in screen:** it shows the code and "Open
   github.com/login/device", and polls until the person has entered the
   code.
 - **Tokens:**
-  - The access and refresh tokens go in the app's keychain, in the host
-    app's own access group. It must never be a group shared with another
-    app's GitHub sign-in, or one sign-in would replace the other.
-  - They're keyed by the App's client id.
-  - They're refreshed before they expire, and the person signs in again
-    when the refresh token runs out.
-- **Sign Out** deletes both tokens.
+  - An OAuth App's token doesn't expire and has no refresh token.
+    `GitHubAuth` also keeps handling expiring tokens and their refresh, for
+    the switch to a GitHub App.
+  - The token goes in the app's keychain, in the host app's own access
+    group. It must never be a group shared with another app's GitHub
+    sign-in, or one sign-in would replace the other.
+  - It's keyed by the client id, and never printed or logged.
+- **Sign Out** deletes the token from the keychain. Revoking it on GitHub
+  needs the OAuth App's client secret, which never ships in an app, so the
+  sheet says where to revoke it: GitHub › Settings › Applications.
 - **Names and behaviour** follow the owner's existing GitHub client, so the
   two can merge:
-  - `GitHubDeviceFlow`: honours `interval` and `slow_down`, and refreshes
-    with `grant_type=refresh_token`;
-  - `GitHubToken`;
+  - `GitHubDeviceFlow`: takes a scope, honours `interval` and `slow_down`,
+    and refreshes with `grant_type=refresh_token` when there's a refresh
+    token;
+  - `GitHubToken`, with optional expiry;
   - `TokenStore`, with `KeychainTokenStore` and `MemoryTokenStore`;
-  - `GitHubCredentials`: renews before expiry, and forgets the token on a
-    401.
+  - `GitHubCredentials`: renews before expiry when it can, and forgets the
+    token on a 401.
 
   The owner's issues browser can move onto `GitHubAuth` and
   `GitHubIssues` once they're released.
 
-**What the owner creates** (if `ghu_` is taken; see section 4):
-
-- **App:** a GitHub App, named as the owner chooses (it's shown as "via …").
-  Its homepage is this repository.
-- **Settings:**
-  - webhook off;
-  - no callback URL;
-  - **Enable Device Flow** on;
-  - **Expire user authorization tokens** on.
-- **Permissions:**
-  - repository: Issues, read and write; Metadata, read;
-  - nothing else: no Contents, and no account permissions.
-- **Installed on:** each app's repository, and installable on this account
-  only.
-- **Settings in each app:** the App's client id (not a secret) goes in
-  the app's Info.plist as `ShakeKitClientID`, stamped by its CI. No client
-  secret or private key is needed.
+**What the owner creates:** an **OAuth App** (Settings › Developer
+settings › OAuth Apps), with this repository as its homepage and callback
+URL (device flow never uses the callback), and **Enable Device Flow** on.
+No client secret is generated or needed. Its client id (not a secret) goes
+in each app's Info.plist as `ShakeKitClientID`, and the scope as
+`ShakeKitScope`, both stamped by the app's CI.
 
 ## 6. Privacy
 
