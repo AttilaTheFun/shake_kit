@@ -83,7 +83,7 @@ enum Platform {
         guard sysctlbyname("hw.model", nil, &size, nil, 0) == 0, size > 0 else { return "Mac" }
         var bytes = [CChar](repeating: 0, count: size)
         guard sysctlbyname("hw.model", &bytes, &size, nil, 0) == 0 else { return "Mac" }
-        return String(cString: bytes)
+        return String(decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
         #elseif canImport(UIKit)
         if let simulated = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] {
             return simulated + " (Simulator)"
